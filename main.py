@@ -359,8 +359,8 @@ def mainwindow():
                                 highlightthickness=0)
 
         explore_button = ttk.Button(title_bar, text="Explore",width=15,command=lambda: [instwinremove(),updwinremove()]) 
-        installed_button = ttk.Button(title_bar, text="Installed",width=15,command=lambda:[instwinremove(),updwinremove(),loadingwindow("instwindow")])
-        Update_button = ttk.Button(title_bar, text="Updates",width=15,command=lambda: [instwinremove(),updwinremove(),loadingwindow("Updwindow")])
+        installed_button = ttk.Button(title_bar, text="Installed",width=15,command=lambda:[instwinremove(),updwinremove(),instwindow()])
+        Update_button = ttk.Button(title_bar, text="Updates",width=15,command=lambda: [instwinremove(),updwinremove(),Updwindow()])
         
         explore_button.place(relx=0.45,rely=0.15)
         installed_button.place(relx=0.33,rely=0.15)
@@ -388,8 +388,8 @@ def mainwindow():
         quote.place(relx=0.435, rely=0.1)
 
         headinglabel = ttk.Label(instwin,text="Installed Apps", font=("Segou UI variable", 20))
-        headinglabel.place(relx=0.45,rely=0.15)
-
+        headinglabel.pack(anchor=CENTER, pady=10)
+        
         on = PhotoImage(file=r"images\darkicon.png")
         on = on.subsample(5, 5)
         off = PhotoImage(file=r"images\lighticon.png")
@@ -450,45 +450,136 @@ def mainwindow():
         expand_button.bind('<Leave>', return_size_on_hovering)
         minimize_button.bind('<Enter>', changem_size_on_hovering)
         minimize_button.bind('<Leave>', returnm_size_on_hovering)
+
+        # main frame
+        window = Frame(instwin, highlightthickness=0)
+        window.pack(expand=1, fill=BOTH)
+
+
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        try:
+            clr()
+            intcheckapp("instwin")
+            result = str(subprocess.run(["winget","list","--source","winget"], capture_output=True, startupinfo=startupinfo, creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NO_WINDOW))
+            start = result.index("Name")
+            end = result.index("stderr=b'')")
+            result = result[start:end]
+            result = result.strip().split("\\r\\n")
             
-        closeloadapps()
+            for line in result[2:]:
+                items = line.split()
+
+                if len(items)==3:
+                    appname = items[0:1]
+                    app_id = items[1]
+                elif len(items)==4:
+                    appname = items[0:2]
+                    app_id = items[2]
+                elif len(items)==5:
+                    appname = items[0:3]
+                    app_id = items[3]
+                elif len(items)==6:
+                    appname = items[0:4]
+                    app_id = items[4]
+                elif len(items)==7:
+                    appname = items[0:5]
+                    app_id = items[5]
+                elif len(items)==8:
+                    appname = items[0:6]
+                    app_id = items[6]
+                elif len(items)==9:
+                    appname = items[0:7]
+                    app_id = items[7]
+                elif len(items)==10:
+                    appname = items[0:8]
+                    app_id = items[8]
+                elif len(items)==11:
+                    appname = items[0:9]
+                    app_id = items[9]
+                elif len(items)==12:
+                    appname = items[0:10]
+                    app_id = items[10]
+                elif len(items)==13:
+                    appname = items[0:11]
+                    app_id = items[11]
+                elif len(items)==14:
+                    appname = items[0:12]
+                    app_id = items[12]
+                elif len(items)==15:
+                    appname = items[0:13]
+                    app_id = items[13]
+                elif len(items)==16:
+                    appname = items[0:14]
+                    app_id = items[14]
+                elif len(items)==17:
+                    appname = items[0:15]   
+                    app_id = items[15]
+                apps.append([appname,app_id])
+            apps.pop()
+        except NameError:
+            pass
+        except ValueError:
+            pass
+        
+        def update_app(app_id):
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            subprocess.run(["winget","update","--id" ,app_id ,"--include-unknown"], check=True, capture_output=True, startupinfo=startupinfo, creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NO_WINDOW)
+
+        def uninstall_app(app_id):
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            subprocess.run(["winget","uninstall","--id" ,app_id], check=True, capture_output=True, startupinfo=startupinfo, creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NO_WINDOW)
+
+        canvas = Canvas(window)
+        canvas.pack(side="left", fill="both", expand=True)
+
+        # Create a scrollbar for the canvas
+        scrollbar = ttk.Scrollbar(window, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+
+        # Configure the canvas to use the scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        # Create a frame inside the canvas to hold the app entries
+        app_frame = Frame(canvas)
+        canvas.create_window((0, 0), window=app_frame, anchor="nw")
+
+        for idx, app in enumerate(apps, start=1):
+            app_name = app[0]
+            app_id = app[1]
+
+            # Create a frame for each app entry
+            entry_frame = Frame(app_frame)
+            entry_frame.pack(anchor="w", padx=10, pady=5)
+
+            # Create the serial number label
+            serial_label = ttk.Label(entry_frame, text=f"{idx}.")
+            serial_label.pack(side="left", padx=(0, 10))
+
+            # Create the app name label
+            app_label = ttk.Label(entry_frame, text=app_name)
+            app_label.pack(side="left")
+
+            # Create the update button
+            update_button = ttk.Button(entry_frame, text="Update", command=lambda id=app_id: update_app(id))
+            update_button.pack(side="left", padx=10)
+
+            # Create the uninstall button
+            uninstall_button = ttk.Button(entry_frame, text="Uninstall", command=lambda id=app_id: uninstall_app(id))
+            uninstall_button.pack(side="left")
+
+            app_frame.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
+            window.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
+            instwin.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
 
          # some settings
         instwin.bind("<FocusIn>", deminimize)  # to view the window by clicking on the window icon on the taskbar
         instwin.after(10, lambda: set_appwindow(instwin))  # to see the icon on the task bar
         instwin.mainloop()
 
-    def loadingwindow(window):
-        global loadapps
-        loadapps = Toplevel()
-        loadapps.overrideredirect(True)
-        main.attributes("-alpha", 0.9)
-        app_width = 1024
-        app_height = 512
-        screenwidth = loadapps.winfo_screenwidth()
-        screenheight = loadapps.winfo_screenheight()
-        x = (screenwidth / 2) - (app_width / 2)
-        y = (screenheight / 2) - (app_height / 2)
-        loadapps.geometry(f'{app_width}x{app_height}+{int(x)}+{int(y)}')
-        global packages
-        if mode == "dark":
-            bg_image = ImageTk.PhotoImage(Image.open(r"images\checkupdates dark.png"))
-            label1 = Label(loadapps, image=bg_image)
-            label1.pack()
-        elif mode == "light":
-            bg_image = ImageTk.PhotoImage(Image.open(r"images\checkupdates light.png"))
-            label1 = Label(loadapps, image=bg_image)
-            label1.pack()
-        loadapps.update()
-        
-        allapps=checkallpack()
-
-        if window == "Updwindow":
-            loadapps.after(2000,lambda: Updwindow())
-        elif window == "instwindow":
-            loadapps.after(2000,lambda: instwindow())
-            
-        loadapps.mainloop()
 
     def Updwindow():
         def set_appwindow(mainWindow):  # to display the window icon on the taskbar,
@@ -570,9 +661,10 @@ def mainwindow():
                                 highlightthickness=0)
 
         explore_button = ttk.Button(title_bar, text="Explore",width=15,command=lambda: [instwinremove(),updwinremove()]) 
-        installed_button = ttk.Button(title_bar, text="Installed",width=15,command=lambda:[instwinremove(),updwinremove(),loadingwindow("instwindow")])
-        Update_button = ttk.Button(title_bar, text="Updates",width=15,command=lambda: [instwinremove(),updwinremove(),loadingwindow("Updwindow")])
+        installed_button = ttk.Button(title_bar, text="Installed",width=15,command=lambda:[instwinremove(),updwinremove(),instwindow()])
+        Update_button = ttk.Button(title_bar, text="Updates",width=15,command=lambda: [instwinremove(),updwinremove(),Updwindow()])
 
+        
         close_button.bind('<Enter>', changex_on_hovering)
         close_button.bind('<Leave>', returnx_to_normalstate)
         expand_button.bind('<Enter>', change_size_on_hovering)
@@ -606,7 +698,7 @@ def mainwindow():
         quote.place(relx=0.435, rely=0.1)
 
         headinglabel = ttk.Label(updwin,text="Update Apps", font=("Segou UI variable", 20))
-        headinglabel.place(relx=0.45,rely=0.15)
+        headinglabel.pack(anchor=CENTER, pady=10)
 
         on = PhotoImage(file=r"images\darkicon.png")
         on = on.subsample(5, 5)
@@ -659,12 +751,120 @@ def mainwindow():
         settingsicon = settingsicon.subsample(18, 18)
         settingsbutton = ttk.Button(title_bar, image=settingsicon, padding=0, command=lambda: settingswindow())
         settingsbutton.place(relx=0.84, rely=0.075)
+
+        # main frame
+        window = Frame(updwin, highlightthickness=0)
+        window.pack(expand=1, fill=BOTH)
+
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        try:
+            clr()
+            intcheckapp("updwin")
+            result = str(subprocess.run(["winget","update","--source","winget"], capture_output=True, startupinfo=startupinfo, creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NO_WINDOW))
+            start = result.index("Name")
+            end = result.index("stderr=b'')")
+            result = result[start:end]
+            result = result.strip().split("\\r\\n")
+            for line in result[2:-1]:
+                items = line.split()
+                if len(items)==4:
+                    appname = items[0:1]
+                    app_id = items[1]
+                elif len(items)==5:
+                    appname = items[0:2]
+                    app_id = items[2]
+                elif len(items)==6:
+                    appname = items[0:3]
+                    app_id = items[3]
+                elif len(items)==7:
+                    appname = items[0:4]
+                    app_id = items[4]
+                elif len(items)==8:
+                    appname = items[0:5]
+                    app_id = items[5]
+                elif len(items)==9:
+                    appname = items[0:6]
+                    app_id = items[6]
+                elif len(items)==10:
+                    appname = items[0:7]
+                    app_id = items[7]
+                elif len(items)==11:
+                    appname = items[0:8]
+                    app_id = items[8]
+                elif len(items)==12:
+                    appname = items[0:9]
+                    app_id = items[9]
+                elif len(items)==13:
+                    appname = items[0:10]
+                    app_id = items[10]
+                elif len(items)==14:
+                    appname = items[0:11]
+                    app_id = items[11]
+                elif len(items)==15:
+                    appname = items[0:12]
+                    app_id = items[12]
+                elif len(items)==16:
+                    appname = items[0:13]
+                    app_id = items[13]
+                elif len(items)==17:
+                    appname = items[0:14]   
+                    app_id = items[14]
+                apps.append([appname,app_id])
+            apps.pop()
+        except NameError:
+            pass
+        except ValueError:
+            pass
         
-        closeloadapps()
+        def update_app(app_id):
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            subprocess.run(["winget","update","--id" ,app_id ,"--include-unknown"], check=True, capture_output=True, startupinfo=startupinfo, creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NO_WINDOW)
+
+        canvas = Canvas(window)
+        canvas.pack(side="left", fill="both", expand=True)
+
+        # Create a scrollbar for the canvas
+        scrollbar = ttk.Scrollbar(window, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+
+        # Configure the canvas to use the scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        # Create a frame inside the canvas to hold the app entries
+        app_frame = Frame(canvas)
+        canvas.create_window((0, 0), window=app_frame, anchor="nw")
+
+        for idx, app in enumerate(apps, start=1):
+            app_name = app[0]
+            app_id = app[1]
+
+            # Create a frame for each app entry
+            entry_frame = Frame(app_frame)
+            entry_frame.pack(anchor="w", padx=10, pady=5)
+
+            # Create the serial number label
+            serial_label = ttk.Label(entry_frame, text=f"{idx}.")
+            serial_label.pack(side="left", padx=(0, 10))
+
+            # Create the app name label
+            app_label = ttk.Label(entry_frame, text=app_name)
+            app_label.pack(side="left")
+
+            # Create the update button
+            update_button = ttk.Button(entry_frame, text="Update", command=lambda id=app_id: update_app(id))
+            update_button.pack(side="left", padx=10)
+
+
+            app_frame.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
+            window.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
+            updwin.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
          # some settings
+
         updwin.bind("<FocusIn>", deminimize)  # to view the window by clicking on the window icon on the taskbar
         updwin.after(10, lambda: set_appwindow(updwin))  # to see the icon on the task bar
-        closeloadapps()
         updwin.mainloop()
 
     def instwinremove():
@@ -682,13 +882,9 @@ def mainwindow():
         except NameError:
             pass
 
-    def closeloadapps():
-        loadapps.destroy()
-
-
     explore_button = ttk.Button(title_bar, text="Explore",width=15,command=lambda: [instwinremove(),updwinremove()]) 
-    installed_button = ttk.Button(title_bar, text="Installed",width=15,command=lambda:[instwinremove(),updwinremove(),loadingwindow("instwindow")])
-    Update_button = ttk.Button(title_bar, text="Updates",width=15,command=lambda: [instwinremove(),updwinremove(),loadingwindow("Updwindow")])
+    installed_button = ttk.Button(title_bar, text="Installed",width=15,command=lambda:[instwinremove(),updwinremove(),instwindow()])
+    Update_button = ttk.Button(title_bar, text="Updates",width=15,command=lambda: [instwinremove(),updwinremove(),Updwindow()])
 
     explore_button.place(relx=0.45,rely=0.15)
     installed_button.place(relx=0.33,rely=0.15)
@@ -700,11 +896,9 @@ def mainwindow():
 
     def close():
         settings.destroy()
-        main.attributes("-alpha", 1)
 
     
     def settingswindow():
-        main.attributes("-alpha", 0.9)
         def savedoptions():
             try:
                 with open("settings.json", "r") as x:
@@ -717,8 +911,8 @@ def mainwindow():
         global settings
         settings = Toplevel()
         settings.overrideredirect(True)
-        app_width = 704
-        app_height = 320
+        app_width = 512
+        app_height = 256
         screenwidth = settings.winfo_screenwidth()
         screenheight = settings.winfo_screenheight()
         x = (screenwidth / 2) - (app_width / 2)
@@ -737,15 +931,13 @@ def mainwindow():
             with open("settings.json", "w") as json_file:
                 json.dump(checkvalues, json_file)
 
-    
-
-        pref =ttk.Label(settings,text="Preferences", font=("Segou UI variable", 20))
+        pref =ttk.Label(settings,text="Settings", font=("Segou UI variable", 20))
         atupdate = ttk.Checkbutton(settings,text="Enable Auto Update", variable=autoupd)
         
         savebutton= ttk.Button(settings,text="Save",width=15,command=lambda: [saveconfig(),settings.destroy(),main.attributes("-alpha", 1)])
-        pref.place(relx=0.4,rely=0.15)
-        atupdate.place(relx=0.5,rely=0.3)
-        savebutton.place(relx=0.4,rely=0.8)
+        pref.place(relx=0.38,rely=0.15)
+        atupdate.place(relx=0.335,rely=0.3)
+        savebutton.place(relx=0.35,rely=0.8)
         
         savedoptions()
         
@@ -1049,6 +1241,7 @@ def mainwindow():
             global apps
             for line in result[2:]:
                 items = line.split()
+                print(items)
                 if len(items)==4:
                     appname = items[0:1]
                     app_id = items[1]
@@ -1102,37 +1295,38 @@ def mainwindow():
     def selectinstall(packman):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            # Create a new window for search results
         selinst = Toplevel()
         selinst.overrideredirect(True)
-        main.attributes("-alpha", 0.9)
-        app_width = 512
+        app_width = 768
         app_height = 256
         screenwidth = selinst.winfo_screenwidth()
         screenheight = selinst.winfo_screenheight()
         x = (screenwidth / 2) - (app_width / 2)
         y = (screenheight / 2) - (app_height / 2)
         selinst.geometry(f'{app_width}x{app_height}+{int(x)}+{int(y)}')
-        main.bind("<Button-3>", lambda e: [selinst.destroy(),clr(),main.attributes("-alpha", 1)])
-        selinst.bind("<Button-3>", lambda e:[selinst.destroy(),clr(),main.attributes("-alpha", 1)])
-        main.bind("<Button-1>", lambda e:[selinst.destroy(),clr(),main.attributes("-alpha",1)])
-
-        sec = Frame(selinst)
-        sec.pack(fill=X, side=BOTTOM )
-
-        my_canvas = Canvas(selinst)
-        my_canvas.pack(side=LEFT, fill=BOTH, expand=1)
-
-        y_scrollbar = ttk.Scrollbar(selinst, orient=VERTICAL, command=my_canvas.yview)
-        y_scrollbar.pack(side=RIGHT, fill=Y)
-
-        my_canvas.configure(yscrollcommand=y_scrollbar.set)
-        my_canvas.bind("<Configure>", lambda e: my_canvas.config(scrollregion=my_canvas.bbox(ALL)))
+        main.bind("<Button-3>", lambda e: [selinst.destroy(),clr()])
+        selinst.bind("<Button-3>", lambda e:[selinst.destroy(),clr()])
+        main.bind("<Button-1>", lambda e:[selinst.destroy(),clr()])
         
-        second_frame = Frame(my_canvas)
-        my_canvas.create_window((0, 0), window=second_frame, anchor="nw")
-        second_frame.bind("<MouseWheel>", lambda event: my_canvas.yview_scroll(-1*(event.delta//120), "units"))
-        selinst.bind("<MouseWheel>", lambda event: my_canvas.yview_scroll(-1*(event.delta//120), "units"))
-        sec.bind("<MouseWheel>", lambda event: my_canvas.yview_scroll(-1*(event.delta//120), "units"))
+        # Create a canvas to hold the app widgets
+        canvas = Canvas(selinst)
+        canvas.pack(side=LEFT, fill=BOTH, expand=True)
+        
+        # Create a scrollbar for the canvas
+        scrollbar = ttk.Scrollbar(selinst, orient=VERTICAL, command=canvas.yview)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        
+        # Configure the canvas to work with the scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        
+        # Create a frame to contain the app widgets
+        frame = Frame(canvas)
+        canvas.create_window((0, 0), window=frame, anchor=NW)
+        
+        frame.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
+        selinst.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
         
         def on_select():
             selected_ids = []
@@ -1144,11 +1338,8 @@ def mainwindow():
                 for app_id in selected_ids:
                     subprocess.run(["winget", "install", "--id", app_id], stderr=subprocess.PIPE, startupinfo=startupinfo, creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NO_WINDOW)
  
-        spacing = ttk.Label(second_frame, text="  ", font=("calibri", 35))
-        spacing.grid(row=0, column=0)
-        
-        applabel=ttk.Label(second_frame,text="Select an App to Install:- \n")
-        applabel.grid(row=1,column=1)
+        applabel=ttk.Label(frame,text="Select an App to Install:- \n",font=("TkDefaultFont", 16, "bold"))
+        applabel.pack(anchor=W, pady=10)
 
         
         appnames= []
@@ -1158,16 +1349,16 @@ def mainwindow():
         vars = []
         for index, app_id in enumerate(appnames):
             var = IntVar()
-            checkbox = ttk.Checkbutton(second_frame, text=app_id, variable=var)
-            checkbox.grid(row=index+2,column=1)
-            checkbox.bind("<MouseWheel>", lambda event: my_canvas.yview_scroll(-1*(event.delta//120), "units"))
+            checkbox = ttk.Checkbutton(frame, text=app_id, variable=var)
+            checkbox.pack(anchor=W, pady=3)
+            checkbox.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
             vars.append(var)
 
-        select_button = ttk.Button(second_frame, text="Install", command=lambda: on_select())
+        select_button = ttk.Button(frame, text="Install", command=lambda: on_select())
         if packman == "winget":
-            select_button.grid(row=len(apps)+2,column=1)
+            select_button.pack(anchor=W, pady=10)
 
-        spacing.bind("<MouseWheel>", lambda event: my_canvas.yview_scroll(-1*(event.delta//120), "units"))
+        spacing.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-1*(event.delta//120), "units"))
         selinst.mainloop()
 
     
@@ -1499,7 +1690,6 @@ def mainwindow():
         global load
         load = Toplevel()
         load.overrideredirect(True)
-        main.attributes("-alpha", 0.95)
         app_width = 640
         app_height = 320
         screenwidth = load.winfo_screenwidth()
